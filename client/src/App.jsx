@@ -10,7 +10,7 @@ import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
 import ModernHomeScreen from './screens/ModernHomeScreen';
 import PostDetailScreen from './screens/PostDetailScreen';
-import ConfirmLogoutModel from './screens/ConfirmLogoutModel';
+import ConfirmLogoutModal from './screens/ConfirmLogoutModal';
 import ProfileScreen from './screens/ProfileScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -49,8 +49,8 @@ function App() {
           />
           <Stack.Screen
             options={{ headerShown: false, animation: 'slide_from_bottom', presentation: 'containedTransparentModal' }}
-            name="ConfirmLogoutModel"
-            component={ConfirmLogoutModel}
+            name="ConfirmLogoutModal"
+            component={ConfirmLogoutModal}
           />
         </Stack.Navigator>
       </NavigationContainer>

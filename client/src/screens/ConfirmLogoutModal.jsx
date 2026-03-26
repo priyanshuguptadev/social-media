@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const ConfirmLogoutModel = ({ navigation, route }) => {
+const ConfirmLogoutModal = ({ navigation, route }) => {
     const { onConfirm } = route.params || {};
 
     const handleConfirm = () => {
@@ -102,4 +102,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ConfirmLogoutModel;
+export default ConfirmLogoutModal;

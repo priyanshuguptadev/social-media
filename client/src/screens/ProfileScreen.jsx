@@ -7,8 +7,9 @@ import { getToken, deleteToken } from '../utils/auth';
 import { secureAxiosClient } from '../utils/axios';
 import { getRelativeTime } from '../utils/time';
 import AvatarCircle from '../components/AvatarCircle';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { uploadImage } from '../utils/cloudinary';
+import PostCard from '../components/PostCard';
+import ScreenHeader from '../components/ui/ScreenHeader';
+import CreatePostModal from '../components/features/CreatePostModal';
 
 const ProfileScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -18,9 +19,6 @@ const ProfileScreen = ({ navigation }) => {
 
   // Create Post Modal State
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
-  const [newPostText, setNewPostText] = useState('');
-  const [newPostImage, setNewPostImage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchAuthAndProfile = async () => {
     try {
@@ -56,7 +54,7 @@ const ProfileScreen = ({ navigation }) => {
   );
 
   const handleConfirmLogout = async () => {
-    navigation.navigate("ConfirmLogoutModel", {
+    navigation.navigate("ConfirmLogoutModal", {
       onConfirm: async () => {
         await deleteToken();
         navigation.reset({
@@ -67,52 +65,11 @@ const ProfileScreen = ({ navigation }) => {
     });
   };
 
-  const pickImage = async () => {
-    try {
-      const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 });
-      if (result.assets && result.assets.length > 0) {
-        setNewPostImage(result.assets[0].uri);
-      }
-    } catch (e) {
-      console.log('Image picker error:', e);
-    }
-  };
-
-  const handleCreatePost = async () => {
-    if (!newPostText.trim() && !newPostImage.trim()) return;
-
-    try {
-      setIsSubmitting(true);
-      let finalImageUrl = null;
-      if (newPostImage) {
-        finalImageUrl = await uploadImage(newPostImage);
-        if (!finalImageUrl) {
-          console.log('Failed to upload image securely');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      const payload = { content: newPostText };
-      if (finalImageUrl) {
-        payload.image = finalImageUrl;
-      }
-
-      const res = await secureAxiosClient.post('/posts', payload);
-
-      setProfileData(prev => ({
-        ...prev,
-        posts: [res.data, ...prev.posts]
-      }));
-
-      setNewPostText('');
-      setNewPostImage('');
-      setCreateModalVisible(false);
-    } catch (err) {
-      console.log('Error creating post:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handlePostCreated = (newPost) => {
+    setProfileData(prev => ({
+      ...prev,
+      posts: [newPost, ...prev.posts]
+    }));
   };
 
   const handleLike = async (postId) => {
@@ -170,62 +127,7 @@ const ProfileScreen = ({ navigation }) => {
       time: item.createdAt ? getRelativeTime(item.createdAt) : 'now',
     };
 
-    return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate('PostDetail', { post: formattedPost, currentUser: user })}
-        style={styles.postContainer}
-      >
-        <View style={styles.postHeader}>
-          <AvatarCircle username={user.username} size={44} />
-          <View style={styles.postHeaderTextContainer}>
-            <View style={styles.nameRow}>
-              <View style={styles.nameColumn}>
-                <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
-                <Text style={styles.userHandle} numberOfLines={1}>@{user.username}</Text>
-              </View>
-              <Text style={styles.timeText}>{formattedPost.time}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.postContent}>
-          {item.content && <Text style={styles.postText}>{item.content}</Text>}
-          {item.image && (
-            <Image
-              source={{ uri: item.image }}
-              style={[styles.postImage, { marginTop: item.content ? 16 : 0 }]}
-              resizeMode="cover"
-            />
-          )}
-        </View>
-
-        <View style={styles.postActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(formattedPost.id)}
-            disabled={!isAuth}
-          >
-            <MaterialDesignIcons
-              name={formattedPost.isLiked ? "heart" : "heart-outline"}
-              size={18}
-              color={formattedPost.isLiked ? "#FF3B30" : "#666666"}
-            />
-            <Text style={[styles.actionText, formattedPost.isLiked && { color: "#FF3B30" }]}>
-              {formattedPost.likesCount}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('PostDetail', { post: formattedPost, currentUser: user })}
-          >
-            <MaterialDesignIcons name="comment-outline" size={18} color="#666666" />
-            <Text style={styles.actionText}>{item.comments ? item.comments.length : 0}</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
+    return <PostCard post={formattedPost} currentUser={isAuth ? user : null} onLike={handleLike} />;
   };
 
   const renderProfileHeader = () => (
@@ -259,19 +161,15 @@ const ProfileScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <View style={[styles.header, { paddingTop: insets.top || 44 }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialDesignIcons name="arrow-left" size={24} color="#000000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isAuth ? user.name : 'Profile'}</Text>
-        {isAuth ? (
+      <ScreenHeader 
+        title={isAuth ? user?.name : 'Profile'}
+        showBackButton={true}
+        rightComponent={isAuth ? (
           <TouchableOpacity style={styles.logoutHeaderButton} onPress={handleConfirmLogout}>
             <Text style={{ color: "#111111" }}>Logout</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.headerPlaceholder} />
-        )}
-      </View>
+        ) : null}
+      />
 
       <FlatList
         data={posts}
@@ -292,67 +190,12 @@ const ProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
       )}
 
-      {/* Create Post Full Screen Modal */}
-      <Modal
-        visible={isCreateModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setCreateModalVisible(false)}
-      >
-        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.modalHeader, { paddingTop: Platform.OS === 'ios' ? 0 : 16 }]}>
-            <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={styles.modalCancelButton}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modalPostButton,
-                (!newPostText.trim() && !newPostImage.trim()) && styles.modalPostButtonDisabled
-              ]}
-              onPress={handleCreatePost}
-              disabled={(!newPostText.trim() && !newPostImage.trim()) || isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.modalPostButtonText}>Post</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalInputRow}>
-              <AvatarCircle username={user?.username || 'guest'} size={40} />
-              <TextInput
-                style={styles.modalTextInput}
-                placeholder="What's happening?"
-                placeholderTextColor="#AAAAAA"
-                multiline
-                textAlignVertical="top"
-                autoFocus
-                value={newPostText}
-                onChangeText={setNewPostText}
-              />
-            </View>
-
-            {newPostImage ? (
-              <View style={styles.modalImagePreviewContainer}>
-                <Image source={{ uri: newPostImage }} style={styles.modalImagePreview} resizeMode="cover" />
-                <TouchableOpacity style={styles.clearImageBtn} onPress={() => setNewPostImage('')}>
-                  <MaterialDesignIcons name="close-circle" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </ScrollView>
-
-          <View style={[styles.modalToolbar, { paddingBottom: insets.bottom || 16 }]}>
-            <TouchableOpacity style={styles.toolbarButton} onPress={pickImage}>
-              <MaterialDesignIcons name="image-outline" size={24} color={newPostImage ? '#FF3B30' : '#888888'} />
-            </TouchableOpacity>
-            {newPostImage ? <Text style={styles.attachedText}>Attached Image</Text> : null}
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <CreatePostModal
+        isVisible={isCreateModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onPostCreated={handlePostCreated}
+        currentUser={user}
+      />
 
     </View>
   );
@@ -363,28 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  headerPlaceholder: {
-    width: 40,
-  },
+
   logoutHeaderButton: {
     padding: 8,
     marginRight: -8,
@@ -469,85 +291,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 80,
   },
-  postContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EAEAEA',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  postHeaderTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  nameColumn: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111111',
-    letterSpacing: -0.4,
-  },
-  userHandle: {
-    fontSize: 14,
-    color: '#888888',
-    letterSpacing: -0.2,
-    marginTop: 2,
-  },
-  timeText: {
-    fontSize: 14,
-    color: '#888888',
-    marginTop: 2,
-  },
-  postContent: {
-    marginBottom: 16,
-  },
-  postText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#222222',
-    letterSpacing: -0.3,
-  },
-  postImage: {
-    width: '100%',
-    height: 280,
-    borderRadius: 16,
-    backgroundColor: '#F7F7F8',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  postActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F8',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  actionText: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
-  },
   fab: {
     position: 'absolute',
     right: 20,
@@ -563,97 +306,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  modalCancelButton: {
-    padding: 8,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#111111',
-  },
-  modalPostButton: {
-    backgroundColor: '#111111',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  modalPostButtonDisabled: {
-    backgroundColor: '#EAEAEA',
-  },
-  modalPostButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  modalBody: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  modalInputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  modalTextInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 18,
-    color: '#111111',
-    lineHeight: 26,
-    minHeight: 120,
-    marginTop: Platform.OS === 'ios' ? 0 : -4,
-    paddingTop: Platform.OS === 'ios' ? 0 : 4,
-  },
-  modalImagePreviewContainer: {
-    marginTop: 16,
-    marginLeft: 52,
-    position: 'relative',
-  },
-  modalImagePreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: '#F7F7F8',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  clearImageBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 12,
-  },
-  modalToolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    backgroundColor: '#FFFFFF',
-  },
-  toolbarButton: {
-    padding: 8,
-  },
-  attachedText: {
-    marginLeft: 8,
-    color: '#111111',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+
 });
 
 export default ProfileScreen;

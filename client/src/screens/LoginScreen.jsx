@@ -5,6 +5,8 @@ import { useNavigation } from "@react-navigation/native";
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { axiosClient } from "../utils/axios";
 import { saveToken } from "../utils/auth";
+import CustomButton from '../components/ui/CustomButton';
+import CustomTextInput from '../components/ui/CustomTextInput';
 
 function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -39,51 +41,36 @@ function LoginScreen() {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Enter your details to access your account.</Text>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="name@example.com"
-            placeholderTextColor="#AAAAAA"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
+        <CustomTextInput
+          label="Email"
+          placeholder="name@example.com"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#AAAAAA"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
+        <CustomTextInput
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity
-          style={[styles.primaryButton, loading && styles.disabledButton]}
+        <CustomButton
+          title="Log In"
           onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Log In</Text>
-          )}
-        </TouchableOpacity>
+          loading={loading}
+        />
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
+        <CustomButton
+          variant="secondary"
+          title="Don't have an account? Sign up"
           onPress={() => navigation.replace('Register')}
-        >
-          <Text style={styles.secondaryButtonText}>Don't have an account? Sign up</Text>
-        </TouchableOpacity>
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -123,57 +110,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 40,
   },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111111',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  input: {
-    backgroundColor: '#F7F7F8',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#111111',
-  },
+
   errorText: {
     color: '#FF3B30',
     fontSize: 14,
     marginBottom: 16,
     marginLeft: 4,
   },
-  primaryButton: {
-    backgroundColor: '#111111',
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 24,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    width: '100%',
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    color: '#666666',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+
 });
 
 export default LoginScreen;
