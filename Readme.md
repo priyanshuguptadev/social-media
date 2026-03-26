@@ -1,4 +1,4 @@
-# ocial
+# Social
 
 Social is a full-stack social app with:
 
