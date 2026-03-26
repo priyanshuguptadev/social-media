@@ -7,6 +7,7 @@ import { axiosClient } from "../utils/axios";
 import { saveToken } from "../utils/auth";
 import CustomButton from '../components/ui/CustomButton';
 import CustomTextInput from '../components/ui/CustomTextInput';
+import useStore from '../store/useStore';
 
 function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +24,7 @@ function RegisterScreen() {
       setError(null);
       const response = await axiosClient.post('/auth/register', { name, email, password });
       await saveToken(response.data.token);
+      await useStore.getState().checkAuth();
       navigation.reset({ index: 0, routes: [{ name: 'ModernHome' }] });
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');

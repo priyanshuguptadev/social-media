@@ -1,62 +1,37 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, ScrollView, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { getToken, deleteToken } from '../utils/auth';
+import { useNavigation } from '@react-navigation/native';
 import { secureAxiosClient } from '../utils/axios';
 import { getRelativeTime } from '../utils/time';
 import AvatarCircle from '../components/AvatarCircle';
 import PostCard from '../components/PostCard';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import CreatePostModal from '../components/features/CreatePostModal';
+import useStore from '../store/useStore';
 
 const ProfileScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const [isAuth, setIsAuth] = useState(null);
-  const [profileData, setProfileData] = useState({ user: null, posts: [] });
-  const [loading, setLoading] = useState(true);
+  const isAuth = useStore(state => state.isAuth);
+  const user = useStore(state => state.user);
+  const posts = useStore(state => state.profilePosts);
+  const loading = useStore(state => state.isLoadingAuth);
+  const checkAuth = useStore(state => state.checkAuth);
+  const likePost = useStore(state => state.likePost);
+  const logout = useStore(state => state.logout);
+  const addPost = useStore(state => state.addPost);
 
-  // Create Post Modal State
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
 
-  const fetchAuthAndProfile = async () => {
-    try {
-      setLoading(true);
-      const token = await getToken();
-      if (!token) {
-        setIsAuth(false);
-        setProfileData({ user: { name: 'Anonymous Visitor', username: 'guest' }, posts: [] });
-        return;
-      }
-
-      const res = await secureAxiosClient.get('/auth/me');
-      if (res.data && res.data.user) {
-        setProfileData(res.data);
-        setIsAuth(true);
-      } else {
-        setIsAuth(false);
-        setProfileData({ user: { name: 'Anonymous Visitor', username: 'guest' }, posts: [] });
-      }
-    } catch (err) {
-      console.log('Error fetching profile:', err);
-      setIsAuth(false);
-      setProfileData({ user: { name: 'Anonymous Visitor', username: 'guest' }, posts: [] });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchAuthAndProfile();
-    }, [])
-  );
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const handleConfirmLogout = async () => {
     navigation.navigate("ConfirmLogoutModal", {
       onConfirm: async () => {
-        await deleteToken();
+        await logout();
         navigation.reset({
           index: 0,
           routes: [{ name: 'Login' }],
@@ -66,35 +41,11 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handlePostCreated = (newPost) => {
-    setProfileData(prev => ({
-      ...prev,
-      posts: [newPost, ...prev.posts]
-    }));
+    addPost(newPost);
   };
 
-  const handleLike = async (postId) => {
-    if (!isAuth || !profileData.user) return;
-    const currentUser = profileData.user;
-
-    setProfileData(prev => ({
-      ...prev,
-      posts: prev.posts.map(p => {
-        if (p._id === postId) {
-          const hasLiked = (p.likes || []).includes(currentUser.username);
-          const newLikes = hasLiked
-            ? p.likes.filter(u => u !== currentUser.username)
-            : [...(p.likes || []), currentUser.username];
-          return { ...p, likes: newLikes };
-        }
-        return p;
-      })
-    }));
-
-    try {
-      await secureAxiosClient.post(`/posts/${postId}/like`);
-    } catch (err) {
-      console.log('Error liking post:', err);
-    }
+  const handleLike = (postId) => {
+    likePost(postId);
   };
 
   if (isAuth === null || loading) {
@@ -105,19 +56,20 @@ const ProfileScreen = ({ navigation }) => {
     );
   }
 
-  const { user, posts } = profileData;
-  const joinedDate = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
+
+  const displayUser = user || { name: 'Anonymous Visitor', username: 'guest' };
+  const joinedDate = displayUser.createdAt ? new Date(displayUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
 
   const renderPostContent = ({ item }) => {
-    const isLiked = isAuth ? (item.likes || []).includes(user.username) : false;
+    const isLiked = (isAuth && user) ? (item.likes || []).includes(user.username) : false;
     const formattedPost = {
       ...item,
       id: item._id,
       text: item.content,
       image: item.image,
       user: {
-        name: user.name,
-        username: user.username,
+        name: displayUser.name,
+        username: displayUser.username,
       },
       likes: item.likes || [],
       likesCount: item.likes ? item.likes.length : 0,
@@ -132,9 +84,9 @@ const ProfileScreen = ({ navigation }) => {
 
   const renderProfileHeader = () => (
     <View style={styles.profileHeader}>
-      <AvatarCircle username={user.username} size={88} />
-      <Text style={styles.profileName}>{user.name}</Text>
-      <Text style={styles.profileHandle}>@{user.username}</Text>
+      <AvatarCircle username={displayUser.username} size={88} />
+      <Text style={styles.profileName}>{displayUser.name}</Text>
+      <Text style={styles.profileHandle}>@{displayUser.username}</Text>
       {joinedDate && (
         <View style={styles.joinDateContainer}>
           <MaterialDesignIcons name="calendar-blank" size={16} color="#888888" />
@@ -161,7 +113,7 @@ const ProfileScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <ScreenHeader 
+      <ScreenHeader
         title={isAuth ? user?.name : 'Profile'}
         showBackButton={true}
         rightComponent={isAuth ? (

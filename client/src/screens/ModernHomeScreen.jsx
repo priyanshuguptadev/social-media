@@ -1,74 +1,37 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { secureAxiosClient } from '../utils/axios';
-import { getToken } from '../utils/auth';
+import { useNavigation } from '@react-navigation/native';
 import { getRelativeTime } from '../utils/time';
 import AvatarCircle from '../components/AvatarCircle';
 import PostCard from '../components/PostCard';
 import ScreenHeader from '../components/ui/ScreenHeader';
+import useStore from '../store/useStore';
 
 const ModernHomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const currentUser = useStore(state => state.user);
+  const posts = useStore(state => state.feedPosts);
+  const loading = useStore(state => state.isLoadingFeed);
+  const fetchFeed = useStore(state => state.fetchFeed);
+  const likePost = useStore(state => state.likePost);
+
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchFeedData = async () => {
-    try {
-      const token = await getToken();
-      if (token) {
-        const resUser = await secureAxiosClient.get('/auth/me');
-        if (resUser.data && resUser.data.user) {
-          setCurrentUser(resUser.data.user);
-        }
-      } else {
-        setCurrentUser(null);
-      }
+  useEffect(() => {
+    fetchFeed();
+  }, []);
 
-      const resPosts = await secureAxiosClient.get('/posts');
-      setPosts(resPosts.data);
-    } catch (err) {
-      console.log('Feed Error:', err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      fetchFeedData();
-    }, [])
-  );
-
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    fetchFeedData();
+    await fetchFeed();
+    setRefreshing(false);
   };
 
-  const handleLike = async (postId) => {
-    if (!currentUser) return;
-    setPosts(prevPosts => prevPosts.map(p => {
-      if (p._id === postId) {
-        const hasLiked = (p.likes || []).includes(currentUser.username);
-        const newLikes = hasLiked
-          ? p.likes.filter(u => u !== currentUser.username)
-          : [...(p.likes || []), currentUser.username];
-        return { ...p, likes: newLikes };
-      }
-      return p;
-    }));
-    try {
-      await secureAxiosClient.post(`/posts/${postId}/like`);
-    } catch (err) {
-      console.log('Error liking post:', err);
-    }
+  const handleLike = (postId) => {
+    likePost(postId);
   };
 
   const renderItem = ({ item }) => {

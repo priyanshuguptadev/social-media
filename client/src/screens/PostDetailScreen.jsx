@@ -9,6 +9,7 @@ import AvatarCircle from '../components/AvatarCircle';
 import PostCard from '../components/PostCard';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import CommentItem from '../components/features/CommentItem';
+import useStore from '../store/useStore';
 
 const PostDetailScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -57,6 +58,9 @@ const PostDetailScreen = ({ route, navigation }) => {
     }, [initialPost.id])
   );
 
+  const likePost = useStore(state => state.likePost);
+  const incrementCommentCount = useStore(state => state.incrementCommentCount);
+
   const handleLike = async () => {
     if (!currentUser) return;
     setPost(prev => {
@@ -72,11 +76,9 @@ const PostDetailScreen = ({ route, navigation }) => {
         isLiked: !hasLiked 
       };
     });
-    try {
-      await secureAxiosClient.post(`/posts/${post.id}/like`);
-    } catch (err) {
-      console.log('Error liking post:', err);
-    }
+    
+    // Update global store
+    likePost(post.id);
   };
 
   const handleComment = async () => {
@@ -89,6 +91,7 @@ const PostDetailScreen = ({ route, navigation }) => {
       });
       fetchPostDetails();
       setCommentText('');
+      incrementCommentCount(post.id);
     } catch (err) {
       console.log('Error posting comment:', err);
     } finally {

@@ -7,6 +7,7 @@ import { axiosClient } from "../utils/axios";
 import { saveToken } from "../utils/auth";
 import CustomButton from '../components/ui/CustomButton';
 import CustomTextInput from '../components/ui/CustomTextInput';
+import useStore from '../store/useStore';
 
 function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -22,6 +23,7 @@ function LoginScreen() {
       setError(null);
       const response = await axiosClient.post('/auth/login', { email, password });
       await saveToken(response.data.token);
+      await useStore.getState().checkAuth();
       navigation.reset({ index: 0, routes: [{ name: 'ModernHome' }] });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');

@@ -5,6 +5,7 @@
  * @format
  */
 
+import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -14,10 +15,16 @@ import ConfirmLogoutModal from './screens/ConfirmLogoutModal';
 import ProfileScreen from './screens/ProfileScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import useStore from './store/useStore';
 
 const Stack = createNativeStackNavigator();
 
 function App() {
+  const checkAuth = useStore(state => state.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
   return (
     <SafeAreaProvider>
       <NavigationContainer>
