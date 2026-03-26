@@ -45,10 +45,20 @@ const useStore = create((set, get) => ({
   },
 
   addPost: (newPost) => {
-    set((state) => ({
-      feedPosts: [newPost, ...state.feedPosts],
-      profilePosts: [newPost, ...state.profilePosts],
-    }));
+    set((state) => {
+      const populatedPost = { ...newPost };
+      if (!populatedPost.user || typeof populatedPost.user === 'string') {
+        populatedPost.user = {
+          _id: state.user?._id || populatedPost.user,
+          username: state.user?.username || 'unknown',
+          name: state.user?.name || 'Unknown'
+        };
+      }
+      return {
+        feedPosts: [populatedPost, ...state.feedPosts],
+        profilePosts: [populatedPost, ...state.profilePosts],
+      };
+    });
   },
 
   incrementCommentCount: (postId) => {

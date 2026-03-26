@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { getToken } from '../utils/auth';
-
-const BASE_URL = 'https://genealogical-unliberalised-shannan.ngrok-free.dev/api/v1';
+import { BASE_URL } from '@env';
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,
@@ -19,14 +18,17 @@ const secureAxiosClient = axios.create({
   },
 });
 
-secureAxiosClient.interceptors.request.use(async (config) => {
-  const token = await getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+secureAxiosClient.interceptors.request.use(
+  async config => {
+    const token = await getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  },
+);
 
 export { axiosClient, secureAxiosClient };
