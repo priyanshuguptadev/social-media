@@ -146,3 +146,21 @@ All routes are mounted in [backend/src/app.ts](backend/src/app.ts) under `/api/v
 ## Releases
 
 The latest Android APK can be downloaded from the **Releases** section of this repository.
+
+## Screenshots
+
+<p align="center">
+  <img src="./screenshots/login-screen.jpeg" alt="Login Screen" width="220" />
+  <img src="./screenshots/register-screen.jpeg" alt="Register Screen" width="220" />
+  <img src="./screenshots/feed-screen.jpeg" alt="Feed Screen" width="220" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/create-post-screen.jpeg" alt="Create Post Screen" width="220" />
+  <img src="./screenshots/comment.jpeg" alt="Comment Screen" width="220" />
+  <img src="./screenshots/profile-screen.jpeg" alt="Profile Screen" width="220" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/anonymous-profile-screen.jpeg" alt="Anonymous Profile Screen" width="220" />
+</p>
